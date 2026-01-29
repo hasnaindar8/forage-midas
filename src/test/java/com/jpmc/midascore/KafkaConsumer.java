@@ -1,6 +1,7 @@
 package com.jpmc.midascore;
 
 import com.jpmc.midascore.foundation.Transaction;
+import com.jpmc.midascore.service.TransactionValidation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -11,8 +12,15 @@ public class KafkaConsumer {
 
     static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
 
+    private final TransactionValidation transactionValidation;
+
+    public KafkaConsumer(TransactionValidation transactionValidation) {
+        this.transactionValidation = transactionValidation;
+    }
+
     @KafkaListener(topics = "${kafka-topic}", groupId = "test-group")
     public void listen(Transaction record) {
         logger.info("Consumed transaction: {}", record);
+        transactionValidation.validateTransaction(record);
     }
 }
