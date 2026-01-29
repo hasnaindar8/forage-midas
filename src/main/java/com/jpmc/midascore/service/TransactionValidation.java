@@ -2,6 +2,7 @@ package com.jpmc.midascore.service;
 
 import com.jpmc.midascore.entity.TransactionRecord;
 import com.jpmc.midascore.entity.UserRecord;
+import com.jpmc.midascore.foundation.Incentive;
 import com.jpmc.midascore.foundation.Transaction;
 import com.jpmc.midascore.repository.TransactionRecordRepository;
 import com.jpmc.midascore.repository.UserRepository;
@@ -16,9 +17,12 @@ public class TransactionValidation {
 
     private final TransactionRecordRepository transactionRecordRepository;
 
-    public TransactionValidation(UserRepository userRepository, TransactionRecordRepository transactionRecordRepository) {
+    private final IncentiveHandling incentiveHandling;
+
+    public TransactionValidation(UserRepository userRepository, TransactionRecordRepository transactionRecordRepository, IncentiveHandling incentiveHandling) {
         this.userRepository = userRepository;
         this.transactionRecordRepository = transactionRecordRepository;
+        this.incentiveHandling = incentiveHandling;
     }
 
     public boolean validateTransaction(Transaction transaction) {
@@ -29,7 +33,7 @@ public class TransactionValidation {
                 UserRecord senderUserRecord = senderUserRecordOptional.get();
                 UserRecord recipientUserRecord = recipientUserRecordOptional.get();
                 if (senderUserRecord.getBalance() >= transaction.getAmount()) {
-                    updateUsersBalance(senderUserRecord, recipientUserRecord, transaction.getAmount());
+                    updateUsersBalance(senderUserRecord, recipientUserRecord, transaction.getAmount(), transaction);
                     return true;
                 }
             }
@@ -37,10 +41,11 @@ public class TransactionValidation {
         return false;
     }
 
-    private void updateUsersBalance(UserRecord senderUserRecord, UserRecord recipientUserRecord, float amount) {
+    private void updateUsersBalance(UserRecord senderUserRecord, UserRecord recipientUserRecord, float amount, Transaction transaction) {
         senderUserRecord.setBalance(senderUserRecord.getBalance() - amount);
         userRepository.save(senderUserRecord);
-        recipientUserRecord.setBalance(recipientUserRecord.getBalance() + amount);
+        Incentive incentive = incentiveHandling.getIncentive(transaction);
+        recipientUserRecord.setBalance(recipientUserRecord.getBalance() + amount + incentive.getAmount());
         userRepository.save(recipientUserRecord);
         saveTransaction(senderUserRecord, recipientUserRecord, amount);
     }
